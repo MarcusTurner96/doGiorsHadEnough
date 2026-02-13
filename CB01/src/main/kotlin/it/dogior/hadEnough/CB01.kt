@@ -30,6 +30,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.Coroutines.ioSafe
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ShortLink
+import com.lagradost.cloudstream3.utils.loadExtractor
 import it.dogior.hadEnough.extractors.MaxStreamExtractor
 import it.dogior.hadEnough.extractors.MixDropExtractor
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -42,7 +43,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 
 class CB01 : MainAPI() {
-    override var mainUrl = "https://cb01official.uno"
+    override var mainUrl = "https://cb01uno.uno"
     override var name = "CB01"
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries, TvType.Cartoon)
     override var lang = "it"
@@ -78,7 +79,7 @@ class CB01 : MainAPI() {
 
         val document = response.document
         val items = document.selectFirst(".sequex-one-columns")?.select(".post")
-        if (items == null){
+        if (items == null) {
             Log.d("CB01 Page Response", document.toString())
             return null
         }
@@ -163,7 +164,7 @@ class CB01 : MainAPI() {
         val document =
             app.get(url).document
         val mainContainer = document.selectFirst(".sequex-main-container")
-        if (mainContainer == null){
+        if (mainContainer == null) {
             Log.d("CB01", document.toString())
             return null
         }
@@ -327,111 +328,10 @@ class CB01 : MainAPI() {
         callback: (ExtractorLink) -> Unit,
     ): Boolean {
 //        Log.d("CB01 - LoadLinks", "Data: $data")
-        //TODO: update bypass functions
         if (data == "null") return false
         var links = parseJson<List<String>>(data)
         links = links.filter { it.contains("uprot.net") || it.contains("stayonline") }
-        if (links.size > 2) {
-            links = links.subList(2, 4)
-        }
-//        Log.d("CB01", "Scraped Link: $links")
-
-        links.mapNotNull {
-//            Log.d("CB01", "Base Link: $it")
-            var link = if (it.contains("uprot")) {
-                ShortLink.unshortenUprot(it)
-            } else if (it.contains("stayonline")) {
-                bypassStayOnline(it)
-            } else {
-                null
-            }
-
-            var finalBypass: String? = ""
-            ioSafe {
-                if (link!!.contains("uprot.net")) {
-                    while (link?.contains("uprot.net") == true) {
-                        link = ShortLink.unshortenUprot(link!!)
-                    }
-                } else if (link!!.contains("stayonline")) {
-                    while (link?.contains("stayonline") == true) {
-                        link = bypassStayOnline(link!!)
-                    }
-                }
-//                Log.d("CB01", "Final bypass: $link")
-                finalBypass = link
-            }
-
-            finalBypass?.let { l ->
-                if (l.contains("uprot")) {
-                    val x = bypassUprot(l)
-                    val y = ShortLink.unshortenUprot(l)
-                    Log.d("CB01", "x=$x \t y=$y")
-                }
-//                loadExtractor(l, "", subtitleCallback, callback)
-                if (link!!.contains("maxstream")) {
-                    MaxStreamExtractor().getUrl(l, null, subtitleCallback, callback)
-                } else if (link!!.contains("mixdrop")) {
-                    val finalUrl = link!!.replace(".club", ".ps")
-                        .substringBeforeLast("/")
-                        .substringBeforeLast("/")
-                    MixDropExtractor().getUrl(finalUrl, "", subtitleCallback, callback)
-                }
-            }
-        }
-
         return false
-    }
-
-    private suspend fun bypassStayOnline(link: String): String? {
-        val headers = mapOf(
-            "origin" to "https://stayonline.pro",
-            "referer" to link,
-            "host" to link.toHttpUrl().host,
-            "user-agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0",
-            "x-requested-with" to "XMLHttpRequest"
-        )
-//        Log.d("CB01:StayOnline", link)
-        val data = "id=${link.split("/").dropLast(1).last()}&ref="
-
-        val response = app.post(
-            "https://stayonline.pro/ajax/linkEmbedView.php",
-            headers = headers,
-            requestBody = data.toRequestBody("application/x-www-form-urlencoded; charset=UTF-8".toMediaTypeOrNull())
-        )
-
-        val jsonResponse = response.body.string() // Use a JSON parser if needed
-//        Log.d("CB01:StayOnline", jsonResponse)
-        try {
-            val realUrl = JSONObject(jsonResponse).getJSONObject("data").getString("value")
-            return realUrl
-
-        } catch (e: JSONException) {
-            return null
-        }
-    }
-
-    private suspend fun bypassUprot(link: String): String? {
-        val updatedLink = if ("msf" in link) link.replace("msf", "mse") else link
-
-
-        // Generate headers (replace with your own method to generate fake headers)
-        val headers = mapOf(
-            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
-        )
-
-//        Log.d("CB01:Uprot", updatedLink)
-
-        // Make the HTTP request
-        val response = app.get(updatedLink, headers = headers, timeout = 10_000)
-
-        val responseBody = response.body.string()
-
-        // Parse the HTML using Jsoup
-        val document = Jsoup.parse(responseBody)
-        Log.d("CB01:Uprot", document.select("a").toString())
-        val maxstreamUrl = document.selectFirst("a")?.attr("href")
-
-        return maxstreamUrl
     }
 
     data class Post(

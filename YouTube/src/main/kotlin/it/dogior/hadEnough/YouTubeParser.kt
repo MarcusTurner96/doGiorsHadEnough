@@ -26,12 +26,12 @@ import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import java.util.Date
 
 class YouTubeParser(private val apiName: String) {
+    private val service = ServiceList.YouTube
 
     fun getTrendingVideoUrls(page: Int): HomePageList? {
-        val service = ServiceList.YouTube
         val kiosks = service.kioskList
         val trendingsUrl = kiosks.defaultKioskExtractor.url
-        val infoItem = KioskInfo.getInfo(ServiceList.YouTube, trendingsUrl)
+        val infoItem = KioskInfo.getInfo(service, trendingsUrl)
 
         val videos = if (page == 1) {
             infoItem.relatedItems.toMutableList()
@@ -46,7 +46,7 @@ class YouTubeParser(private val apiName: String) {
             var count = 1
             var nextPage = infoItem.nextPage
             while (count < page && hasNext) {
-                val more = KioskInfo.getMoreItems(ServiceList.YouTube, trendingsUrl, nextPage)
+                val more = KioskInfo.getMoreItems(service, trendingsUrl, nextPage)
                 if (count == page - 1) {
                     videos.addAll(more.items)
                 }
@@ -56,6 +56,7 @@ class YouTubeParser(private val apiName: String) {
             }
         }
         val searchResponses = videos.filter { !it.isShortFormContent }.map {
+            @Suppress("DEPRECATION_ERROR")
             MovieSearchResponse(
                 name = it.name,
                 url = it.url,
@@ -86,7 +87,7 @@ class YouTubeParser(private val apiName: String) {
             var count = 1
             var nextPage = playlistInfo.nextPage
             while (count < page && hasNext) {
-                val more = PlaylistInfo.getMoreItems(ServiceList.YouTube, url, nextPage)
+                val more = PlaylistInfo.getMoreItems(service, url, nextPage)
                 if (count == page - 1) {
                     videos.addAll(more.items)
                 }
@@ -96,6 +97,7 @@ class YouTubeParser(private val apiName: String) {
             }
         }
         val searchResponses = videos.map {
+            @Suppress("DEPRECATION_ERROR")
             MovieSearchResponse(
                 name = it.name,
                 url = it.url,
@@ -114,7 +116,7 @@ class YouTubeParser(private val apiName: String) {
     fun channelToSearchResponseList(url: String, page: Int): HomePageList? {
         val channelInfo = ChannelInfo.getInfo(url)
         val tabsLinkHandlers = channelInfo.tabs
-        val tabs = tabsLinkHandlers.map { ChannelTabInfo.getInfo(ServiceList.YouTube, it) }
+        val tabs = tabsLinkHandlers.map { ChannelTabInfo.getInfo(service, it) }
         val videoTab = tabs.first { it.name == "videos" }
 
         val videos = if (page == 1) {
@@ -133,7 +135,7 @@ class YouTubeParser(private val apiName: String) {
             while (count < page && hasNext) {
 
                 val videoTabHandler = tabsLinkHandlers.first{it.url.endsWith("/videos")}
-                val more = ChannelTabInfo.getMoreItems(ServiceList.YouTube, videoTabHandler, nextPage)
+                val more = ChannelTabInfo.getMoreItems(service, videoTabHandler, nextPage)
                 if (count == page - 1) {
                     videos.addAll(more.items)
                 }
@@ -143,6 +145,7 @@ class YouTubeParser(private val apiName: String) {
             }
         }
         val searchResponses = videos.map {
+            @Suppress("DEPRECATION_ERROR")
             MovieSearchResponse(
                 name = it.name,
                 url = it.url,
@@ -162,14 +165,14 @@ class YouTubeParser(private val apiName: String) {
         query: String,
         contentFilter: String = "videos",
     ): List<SearchResponse> {
-        val handlerFactory = ServiceList.YouTube.searchQHFactory
+        val handlerFactory = service.searchQHFactory
         val searchHandler = handlerFactory.fromQuery(
             query,
             listOf(contentFilter),
             null
         )
 
-        val searchInfo = SearchInfo.getInfo(ServiceList.YouTube, SearchQueryHandler(searchHandler))
+        val searchInfo = SearchInfo.getInfo(service, SearchQueryHandler(searchHandler))
 
         val resultSize = searchInfo.relatedItems.size
         if (resultSize <= 0) {
@@ -179,7 +182,7 @@ class YouTubeParser(private val apiName: String) {
         val pageResults = searchInfo.relatedItems.toMutableList()
         var nextPage = searchInfo.nextPage
         for (i in 1..3) {
-            val more = SearchInfo.getMoreItems(ServiceList.YouTube, searchHandler, nextPage)
+            val more = SearchInfo.getMoreItems(service, searchHandler, nextPage)
             pageResults.addAll(more.items)
             if (!more.hasNextPage()) break
             nextPage = more.nextPage
@@ -189,6 +192,7 @@ class YouTubeParser(private val apiName: String) {
 //            Log.d("YouTubeParser", "Related: ${it.name}, type: ${it.infoType}")
             when (it.infoType) {
                 InfoType.PLAYLIST, InfoType.CHANNEL -> {
+                    @Suppress("DEPRECATION_ERROR")
                     TvSeriesSearchResponse(
                         name = it.name,
                         url = it.url,
@@ -198,6 +202,7 @@ class YouTubeParser(private val apiName: String) {
                 }
 
                 InfoType.STREAM -> {
+                    @Suppress("DEPRECATION_ERROR")
                     MovieSearchResponse(
                         name = it.name,
                         url = it.url,
@@ -217,10 +222,13 @@ class YouTubeParser(private val apiName: String) {
     }
 
     fun videoToLoadResponse(videoUrl: String): LoadResponse {
-        val videoInfo = StreamInfo.getInfo(videoUrl)
+        val extractor = service.getStreamExtractor(videoUrl)
+        extractor.fetchPage()
+        val videoInfo = StreamInfo.getInfo(extractor)
         val views = "Views: ${videoInfo.viewCount}"
         val likes = "Likes: ${videoInfo.likeCount}"
         val length = videoInfo.duration / 60
+        @Suppress("DEPRECATION_ERROR")
         return MovieLoadResponse(
             name = videoInfo.name,
             url = videoUrl,
@@ -248,6 +256,7 @@ class YouTubeParser(private val apiName: String) {
             null
         }
         val tags = mutableListOf("Subscribers: ${channelInfo.subscriberCount}")
+        @Suppress("DEPRECATION_ERROR")
         return TvSeriesLoadResponse(
             name = channelInfo.name,
             url = url,
@@ -263,9 +272,10 @@ class YouTubeParser(private val apiName: String) {
 
     private fun getChannelVideos(channel: ChannelInfo): List<Episode> {
         val tabsLinkHandlers = channel.tabs
-        val tabs = tabsLinkHandlers.map { ChannelTabInfo.getInfo(ServiceList.YouTube, it) }
+        val tabs = tabsLinkHandlers.map { ChannelTabInfo.getInfo(service, it) }
         val videoTab = tabs.first { it.name == "videos" }
         val videos = videoTab.relatedItems.mapNotNull {
+            @Suppress("DEPRECATION_ERROR")
             Episode(
                 data = it.url,
                 name = it.name,
@@ -285,7 +295,7 @@ class YouTubeParser(private val apiName: String) {
         var count = 1
         var nextPage = playlistInfo.nextPage
         while (hasNext) {
-            val more = PlaylistInfo.getMoreItems(ServiceList.YouTube, url, nextPage)
+            val more = PlaylistInfo.getMoreItems(service, url, nextPage)
             eps.addAll(more.items)
             hasNext = more.hasNextPage()
             nextPage = more.nextPage
@@ -293,6 +303,7 @@ class YouTubeParser(private val apiName: String) {
             if (count >= 10) break
 //            Log.d("YouTubeParser", "Page ${count + 1}: ${more.items.size}")
         }
+        @Suppress("DEPRECATION_ERROR")
         return TvSeriesLoadResponse(
             name = playlistInfo.name,
             url = url,
@@ -309,13 +320,14 @@ class YouTubeParser(private val apiName: String) {
     private fun getPlaylistVideos(videos: List<StreamInfoItem>): List<Episode> {
         val episodes = videos.map { video ->
 //            Log.d("YouTubeParser", video.name)
+            @Suppress("DEPRECATION_ERROR")
             Episode(
                 data = video.url,
                 name = video.name,
                 posterUrl = video.thumbnails.last().url,
                 runTime = (video.duration / 60).toInt()
             ).apply {
-                video.uploadDate?.let { addDate(Date(it.date().timeInMillis)) }
+                video.uploadDate?.let { addDate(Date(it.instant.epochSecond)) }
             }
         }
         return episodes

@@ -20,8 +20,6 @@ class YouTubePlugin : Plugin() {
 
         if (language.isNullOrEmpty()) {language = "it"}
         if (country.isNullOrEmpty()) {country = "IT"}
-
-        NewPipe.init(NewPipeDownloader.getInstance())
         NewPipe.setupLocalization(Localization(language), ContentCountry(country))
 
         // All providers should be added in this manner

@@ -5,7 +5,7 @@ import os
 
 # --- CONFIGURAZIONE ---
 CHANNEL_USERNAME = "Streaming_community_sito" 
-FILE_PATH = "src/StreamingCommunity/src/main/kotlin/it/dogior/hadEnough/StreamingCommunity.kt"
+FILE_PATH = "StreamingCommunity/src/main/kotlin/it/dogior/hadEnough/StreamingCommunity.kt"
 
 def get_latest_url_from_telegram():
     url_tg = f"https://t.me/s/{CHANNEL_USERNAME}"

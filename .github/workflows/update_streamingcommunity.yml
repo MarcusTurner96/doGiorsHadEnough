@@ -1,0 +1,31 @@
+name: Auto-Update Kotlin URL
+on:
+  schedule:
+    - cron: '0 * * * *' # Ogni ora
+  workflow_dispatch:
+
+jobs:
+  update-kotlin:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4
+
+      - name: Run update script
+        run: python update_kotlin.py
+
+      - name: Commit and Push
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add StreamingCommunity/src/main/kotlin/it/dogior/hadEnough/StreamingCommunity.kt
+          git commit -m "Automated update of mainUrl from Telegram" || exit 0
+          git push

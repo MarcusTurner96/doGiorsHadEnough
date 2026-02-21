@@ -6,6 +6,8 @@ concurrency:
   cancel-in-progress: true
 
 on:
+  schedule:
+    - cron: '0 * * * *' # Ogni ora
   workflow_dispatch:  # Allows manual triggering
   push:
     branches:

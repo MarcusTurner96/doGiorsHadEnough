@@ -60,6 +60,10 @@ def update_kotlin_file(new_domain):
         print(f"File aggiornato con successo con il dominio: {new_domain}")
 
 if __name__ == "__main__":
+    print("Avvio lettura Telegram...")
     domain = get_latest_url_from_telegram()
+    print(f"Dominio estratto da Telegram: {domain}")
     if domain:
         update_kotlin_file(domain)
+    else:
+        print("ATTENZIONE: Nessun dominio valido estratto o messaggio vuoto.")
